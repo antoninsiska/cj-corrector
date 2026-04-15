@@ -2,6 +2,7 @@
 set -e
 
 REPO="antoninsiska/cj-corrector"
+TAP_REPO="antoninsiska/homebrew-cj-corrector"
 FORMULA="Formula/cj-corrector.rb"
 
 # ── 1. Zeptej se na verzi ─────────────────────────────────────────────────────
@@ -51,12 +52,28 @@ sed -i '' "s|sha256 \"[a-f0-9]*\"|sha256 \"${SHA256}\"|" "${FORMULA}"
 echo "   Nová URL:    ${TARBALL_URL}"
 echo "   Nový SHA256: ${SHA256}"
 
-# ── 6. Commitni a pushni ──────────────────────────────────────────────────────
-echo "▶ Commituju a pushuju formuli..."
+# ── 6. Commitni a pushni do hlavního repozitáře ───────────────────────────────
+echo "▶ Commituju a pushuju formuli do ${REPO}..."
 git add "${FORMULA}"
 git commit -m "Release ${TAG}: update Homebrew formula"
 git push origin main
 
+# ── 7. Pushni formuli do Homebrew tap repozitáře ─────────────────────────────
+echo "▶ Aktualizuji tap ${TAP_REPO}..."
+TMP_TAP=$(mktemp -d /tmp/cj-tap-XXXXXX)
+gh repo clone "${TAP_REPO}" "${TMP_TAP}"
+
+# Zkopíruj aktualizovanou formuli (název souboru bez podadresáře Formula/)
+cp "${FORMULA}" "${TMP_TAP}/$(basename "${FORMULA}")"
+
+cd "${TMP_TAP}"
+git add "$(basename "${FORMULA}")"
+git commit -m "Release ${TAG}: update formula"
+git push origin HEAD
+cd - > /dev/null
+rm -rf "${TMP_TAP}"
+
 echo ""
-echo "✓ Hotovo! Release ${TAG} je na GitHubu."
-echo "  https://github.com/${REPO}/releases/tag/${TAG}"
+echo "✓ Hotovo!"
+echo "  Release:  https://github.com/${REPO}/releases/tag/${TAG}"
+echo "  Tap:      https://github.com/${TAP_REPO}"
