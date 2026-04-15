@@ -37,6 +37,17 @@ from ApplicationServices import AXIsProcessTrustedWithOptions
 SCRIPT_DIR   = os.path.dirname(os.path.abspath(__file__))
 INSTALL_DIR  = os.path.expanduser("~/.cj_correcter")
 MISTAKES_FILE = os.path.join(INSTALL_DIR, "mistakes.json")
+LOG_FILE      = os.path.join(INSTALL_DIR, "debug.log")
+
+import logging as _logging
+os.makedirs(INSTALL_DIR, exist_ok=True)
+_logging.basicConfig(
+    filename=LOG_FILE,
+    level=_logging.DEBUG,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+_log = _logging.getLogger("cj")
+_log.info("=== startup  python=%s  script=%s ===", sys.executable, __file__)
 
 try:
     sys.path.insert(0, SCRIPT_DIR)
@@ -313,15 +324,20 @@ class StatusBarController(NSObject):
 
     def _run_correction(self, text, old_clip):
         """Run model in background, then show popup on main thread."""
+        _log.info("_run_correction called, text len=%d", len(text))
         self.performSelectorOnMainThread_withObject_waitUntilDone_(
             "setLoadingTitle:", None, False)
         try:
             sys.path.insert(0, SCRIPT_DIR)
+            _log.info("importing ollama_client from SCRIPT_DIR=%s", SCRIPT_DIR)
             from ollama_client import correct_czech
+            _log.info("running correct_czech...")
             result = correct_czech(text)
+            _log.info("correct_czech done: %s", result)
         except Exception as e:
             import traceback
             err_msg = traceback.format_exc()
+            _log.error("correction failed:\n%s", err_msg)
             self.performSelectorOnMainThread_withObject_waitUntilDone_(
                 "showError:", err_msg, False)
             return
@@ -365,10 +381,14 @@ class StatusBarController(NSObject):
 
     def correctClipboard_(self, _):
         text = _clip_get()
+        _log.info("correctClipboard_ called, clipboard text len=%d repr=%r",
+                  len(text), text[:80] if text else "")
         if text:
             threading.Thread(
                 target=self._run_correction, args=(text, text), daemon=True
             ).start()
+        else:
+            _log.warning("clipboard is empty, doing nothing")
 
     def showStats_(self, _):
         subprocess.Popen(
