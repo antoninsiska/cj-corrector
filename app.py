@@ -320,8 +320,10 @@ class StatusBarController(NSObject):
             from ollama_client import correct_czech
             result = correct_czech(text)
         except Exception as e:
+            import traceback
+            err_msg = traceback.format_exc()
             self.performSelectorOnMainThread_withObject_waitUntilDone_(
-                "resetTitle:", None, False)
+                "showError:", err_msg, False)
             return
         payload = {
             "original":  text,
@@ -337,6 +339,16 @@ class StatusBarController(NSObject):
 
     def resetTitle_(self, _):
         self._item.button().setTitle_("Č✓")
+
+    def showError_(self, msg):
+        self._item.button().setTitle_("Č✓")
+        import subprocess
+        short = (msg or "").strip().splitlines()[-1][:120]
+        subprocess.run(
+            ["osascript", "-e",
+             f'display notification "{short}" with title "CJ Correcter – chyba"'],
+            capture_output=True,
+        )
 
     def showCorrectionResult_(self, payload):
         self._item.button().setTitle_("Č✓")

@@ -10,7 +10,19 @@ class CjCorrector < Formula
 
   def install
     system "python3.12", "-m", "venv", libexec
-    system libexec/"bin/pip", "install", "rumps", "requests", "matplotlib", "torch", "transformers"
+    # Install torch with MPS support (Apple Silicon) and other deps
+    system libexec/"bin/pip", "install", "--upgrade", "pip"
+    system libexec/"bin/pip", "install",
+      "pyobjc-core",
+      "pyobjc-framework-Cocoa",
+      "pyobjc-framework-ApplicationServices",
+      "rumps",
+      "requests",
+      "matplotlib"
+    system libexec/"bin/pip", "install",
+      "--index-url", "https://download.pytorch.org/whl/cpu",
+      "torch"
+    system libexec/"bin/pip", "install", "transformers"
 
     libexec.install Dir["*.py"]
 
